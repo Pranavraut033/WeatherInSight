@@ -1,448 +1,357 @@
-# �️ WeatherInsight Project
+# 🌤️ WeatherInsight
 
-## Project Status: ✅ PRODUCTION OPERATIONAL
+A data engineering project that ingests German weather data from DWD (Deutscher Wetterdienst), processes it with Apache Spark, and serves weather features via a REST API.
 
-**Last Updated**: February 11, 2026  
-**Total Development**: 9 milestones  
-**Current Status**: Stable production deployment, continuous monitoring
+**Status**: ✅ Production Ready | **Last Updated**: February 2026
 
 ---
 
-## Quick Links
-
-### For Deployment
-- **Start Here**: [Production Deployment Guide](docs/PRODUCTION_DEPLOYMENT.md)
-- **Infrastructure**: See [docker-compose.yml](docker-compose.yml) or K8s manifests
-- **Initial Setup**: Follow deployment guide sections 1-6
-
-### For Operations
-- **Daily Operations**: [Operations Handover Guide](docs/OPERATIONS_HANDOVER.md)
-- **Monitoring**: [Monitoring Guide](docs/MONITORING_GUIDE.md)
-- **Troubleshooting**: [Incident Response](docs/INCIDENT_RESPONSE.md)
-
-### For Data Management
-- **Historical Data**: [Backfill Procedures](docs/BACKFILL_PROCEDURES.md)
-- **Schema Changes**: [Schema Change Procedures](docs/SCHEMA_CHANGE_PROCEDURES.md)
-
-### For Development
-- **Architecture**: [Requirements](docs/requirements.md) and [Data Contracts](docs/data-contracts/)
-- **Testing**: [Testing Strategy](docs/TESTING_STRATEGY.md)
-- **API**: [API Documentation](services/api/README.md)
-
----
-
-## What Is WeatherInsight?
-
-WeatherInsight is a production-grade data pipeline that:
-- Ingests hourly weather observations from DWD (German Weather Service)
-- Processes and validates data quarterly using Apache Spark
-- Computes 67 weather features across 5 product types
-- Stores curated features in PostgreSQL
-- Serves data via REST API with authentication and rate limiting
-- Provides comprehensive monitoring, alerting, and data quality checks
-
-**Data Products**:
-- 🌡️ Temperature features (14 features: HDD/CDD, extremes, ranges)
-- 🌧️ Precipitation features (15 features: totals, wet/dry spells, heavy events)
-- 💨 Wind features (14 features: speeds, directions, gusts, calms)
-- 🌡️ Pressure features (13 features: means, ranges, high/low pressure hours)
-- 💧 Humidity features (11 features: means, ranges, high/low humidity hours)
-
----
-
-## System Architecture
-
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                         DATA PIPELINE                            │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                   │
-│  DWD OpenData → Ingestion → MinIO (raw) → Spark Processing →    │
-│  MinIO (staging) → Spark Aggregation → PostgreSQL (curated) →   │
-│  FastAPI → End Users                                             │
-│                                                                   │
-├─────────────────────────────────────────────────────────────────┤
-│                    ORCHESTRATION & MONITORING                    │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                   │
-│  Airflow: Quarterly pipeline scheduling & coordination           │
-│  Prometheus: Metrics collection (3 exporters)                    │
-│  Grafana: Dashboards (pipeline, API, quality, infrastructure)   │
-│  Alertmanager: Alert routing (email, Slack)                      │
-│                                                                   │
-└─────────────────────────────────────────────────────────────────┘
-```
-
----
-
-## Key Features
-
-### Data Pipeline
-- ✅ Automated quarterly batch processing
-- ✅ 200+ active weather stations across Germany
-- ✅ Historical data support (2019-present)
-- ✅ Checksum verification and data validation
-- ✅ Immutable raw storage, versioned curated data
-- ✅ Dataset lineage and metadata tracking
-
-### API Service
-- ✅ 16 REST endpoints (health, stations, features)
-- ✅ OpenAPI/Swagger documentation
-- ✅ API key authentication
-- ✅ Rate limiting (100 req/min default)
-- ✅ Pagination and filtering
-- ✅ CORS support
-- ✅ Prometheus metrics export
-
-### Quality Assurance
-- ✅ 159 tests (106 unit, 30 integration, 23 E2E)
-- ✅ 85% code coverage
-- ✅ Automated data quality checks
-- ✅ Schema validation
-- ✅ Completeness and consistency checks
-
-### Monitoring & Alerting
-- ✅ 4 Grafana dashboards (45 panels)
-- ✅ 10 Prometheus alert rules (critical, warning, info)
-- ✅ 3 metrics exporters (PostgreSQL, Airflow, API)
-- ✅ Real-time health monitoring
-- ✅ Email and Slack notifications
-
-### Documentation
-- ✅ 8,000+ lines of comprehensive documentation
-- ✅ 5 operational runbooks
-- ✅ 20+ step-by-step procedures
-- ✅ 15+ operational checklists
-- ✅ 100+ code/command examples
-
----
-
-## Tech Stack
-
-| Component | Technology | Purpose |
-|-----------|------------|---------|
-| **Data Ingestion** | Python 3.11 | DWD data download and storage |
-| **Object Storage** | MinIO | Immutable raw data storage |
-| **Processing** | Apache Spark 3.4 | Distributed data processing |
-| **Database** | PostgreSQL 15 | Curated feature storage |
-| **Orchestration** | Apache Airflow 2.7 | Pipeline scheduling |
-| **API** | FastAPI 0.104 | REST API service |
-| **Monitoring** | Prometheus 2.47 | Metrics collection |
-| **Dashboards** | Grafana 10.2 | Visualization |
-| **Containerization** | Docker & Docker Compose | Service deployment |
-| **Testing** | pytest | Automated testing |
-
----
-
-## Production Deployment
+## 🚀 Quick Start (5 minutes)
 
 ### Prerequisites
-- Server: 16 vCPU, 128 GB RAM, 2 TB storage
-- Docker & Docker Compose installed
-- Network: HTTPS access, SSL certificate
-- Credentials: SMTP for alerts, API keys
+- Docker & Docker Compose
+- 8+ GB RAM allocated to Docker
+- 20+ GB free disk space
+- macOS, Linux, or Windows with WSL2
 
-### Quick Start
+### Run the Project
+
 ```bash
-# 1. Clone repository
-git clone https://github.com/yourorg/weatherinsight.git
-cd weatherinsight
+# 1. Clone and navigate
+git clone https://github.com/Pranavraut033/WeatherInSight.git
+cd WeatherInSight
 
 # 2. Configure environment
 cp .env.example .env
-nano .env  # Set passwords, keys, SMTP credentials
 
-# 3. Start services
-docker-compose up -d
+# 3. Start all services
+docker compose up -d
 
-# 4. Verify health
-docker-compose ps
-curl http://localhost:8000/health
+# 4. Wait for services to be healthy (~30 seconds)
+docker compose ps
 
-# 5. Access UIs
-# - API: http://localhost:8000/docs
-# - Airflow: http://localhost:8080 (admin/admin123)
-# - Grafana: http://localhost:3002 (admin/admin123)
-# - MinIO: http://localhost:9001 (minioadmin/minioadmin123)
-
-# 6. Initial data load (see BACKFILL_PROCEDURES.md)
-docker exec airflow-scheduler airflow dags trigger weatherinsight_backfill \
-  --conf '{"start_year": 2023, "end_year": 2023, "quarters": [1]}'
+# 5. Access the services
+# - API Docs: http://localhost:8000/docs
+# - Airflow: http://localhost:8080 (admin / admin123)
+# - Grafana: http://localhost:3002 (admin / admin123)
+# - MinIO: http://localhost:9001 (minioadmin / minioadmin123)
+# - Prometheus: http://localhost:9090
 ```
 
-**Full Guide**: See [PRODUCTION_DEPLOYMENT.md](docs/PRODUCTION_DEPLOYMENT.md)
+### Stop the Project
+
+```bash
+# Stop services (data persists)
+docker compose down
+
+# Stop and remove all data
+docker compose down -v
+```
 
 ---
 
-## Operations Overview
-
-### Daily (15-20 minutes)
-- Morning health check (services, alerts, data freshness)
-- API metrics review
-- Alert monitoring
-
-### Weekly (30-45 minutes)
-- Pipeline review and data quality report
-- Resource usage trends
-- API usage reporting
-
-### Monthly (2-4 hours)
-- Maintenance window (security updates, DB optimization)
-- Capacity planning
-- Backup verification
-
-### Quarterly (30-40 hours automated)
-- Automated pipeline execution
-- Data validation
-- Stakeholder notifications
-
-**Full Guide**: See [OPERATIONS_HANDOVER.md](docs/OPERATIONS_HANDOVER.md)
-
----
-
-## Project Milestones
-
-| Milestone | Description | Status | Completion |
-|-----------|-------------|--------|------------|
-| **M0** | Foundations | ✅ Complete | Week 1 |
-| **M1** | Infrastructure | ✅ Complete | Week 1-2 |
-| **M2** | Ingestion | ✅ Complete | Week 2-3 |
-| **M3** | Metadata & Governance | ✅ Complete | Week 3 |
-| **M4** | Processing | ✅ Complete | Week 4-5 |
-| **M5** | Aggregation | ✅ Complete | Week 5-6 |
-| **M6** | Orchestration | ✅ Complete | Week 6-7 |
-| **M7** | Delivery API | ✅ Complete | Week 7-8 |
-| **M8** | QA/Observability | ✅ Complete | Week 8-9 |
-| **M9** | Docs/Handover | ✅ Complete | Week 9 |
-
-**All 9 milestones completed successfully! 🎉**
-
----
-
-## Documentation Index
-
-### Getting Started
-- [README.md](README.md) - This file
-- [NEXT_STEPS.md](NEXT_STEPS.md) - Historical progress and next actions
-- [AGENTS.md](AGENTS.md) - Session guidance for AI agents
-
-### Planning & Requirements
-- [requirements.md](docs/requirements.md) - System requirements
-- [IMPLEMENTATION_PLAN.md](docs/IMPLEMENTATION_PLAN.md) - 9-phase plan
-- [MILESTONES.md](docs/MILESTONES.md) - Milestone checklist
-- [TASK_LIST.md](docs/TASK_LIST.md) - Detailed tasks
-
-### Architecture & Design
-- [RAW_SCHEMA.md](docs/data-contracts/RAW_SCHEMA.md) - Raw data schema
-- [CURATED_SCHEMA.md](docs/data-contracts/CURATED_SCHEMA.md) - Feature schema
-- [RAW_ZONE_LAYOUT.md](docs/data-contracts/RAW_ZONE_LAYOUT.md) - Storage layout
-
-### Production Operations ⭐
-- [PRODUCTION_DEPLOYMENT.md](docs/PRODUCTION_DEPLOYMENT.md) - Deployment guide
-- [OPERATIONS_HANDOVER.md](docs/OPERATIONS_HANDOVER.md) - Operations guide
-- [BACKFILL_PROCEDURES.md](docs/BACKFILL_PROCEDURES.md) - Data backfill
-- [SCHEMA_CHANGE_PROCEDURES.md](docs/SCHEMA_CHANGE_PROCEDURES.md) - Schema changes
-- [runbook.md](docs/runbook.md) - Quick reference
-
-### Quality & Monitoring
-- [TESTING_STRATEGY.md](docs/TESTING_STRATEGY.md) - Testing approach
-- [MONITORING_GUIDE.md](docs/MONITORING_GUIDE.md) - Monitoring setup
-- [INCIDENT_RESPONSE.md](docs/INCIDENT_RESPONSE.md) - Incident response
-
-### Service Documentation
-- [Ingestion Service](services/ingestion/README.md)
-- [Metadata Service](services/metadata/README.md)
-- [Processing Service](services/processing/README.md)
-- [Aggregation Service](services/aggregation/README.md)
-- [Orchestrator Service](services/orchestrator/README.md)
-- [API Service](services/api/README.md)
-
-### Milestone Reports
-- [M2_COMPLETION.md](docs/M2_COMPLETION.md) - Ingestion
-- [M3_COMPLETION.md](docs/M3_COMPLETION.md) - Metadata
-- [M4_COMPLETION.md](docs/M4_COMPLETION.md) - Processing
-- [M5_COMPLETION.md](docs/M5_COMPLETION.md) - Aggregation
-- [M6_COMPLETION.md](docs/M6_COMPLETION.md) - Orchestration
-- [M7_COMPLETION.md](docs/M7_COMPLETION.md) - API
-- [M8_COMPLETION.md](docs/M8_COMPLETION.md) - QA/Observability
-- [M9_COMPLETION.md](docs/M9_COMPLETION.md) - Docs/Handover
-
----
-
-## Key Metrics
-
-### System Capacity
-- **Stations**: 200-300 active weather stations
-- **Data Volume**: ~50 GB raw data per quarter
-- **Features**: 67 computed features per station per quarter
-- **API Throughput**: 100+ requests/second
-- **Data Latency**: Within 7 days of quarter end
-
-### Quality Metrics
-- **Test Coverage**: 85% (exceeds 80% target)
-- **Data Quality**: >95% pass rate
-- **API Latency**: p95 < 200ms, p99 < 500ms
-- **System Uptime**: 99.5%+ capability
-
-### Project Metrics
-- **Total Services**: 6 microservices + 10 infrastructure services
-- **Total Tests**: 159 (106 unit, 30 integration, 23 E2E)
-- **Total Documentation**: 8,000+ lines
-- **Code Quality**: Linted, formatted, type-checked
-
----
-
-## Testing
+## ✅ How to Test
 
 ### Run All Tests
 ```bash
-# Unit tests (all services)
+# Unit tests (fast, ~2 minutes)
 pytest services/*/tests/ -v
 
 # Integration tests
-pytest tests/e2e/ -v --integration
+pytest tests/e2e/ -v -m integration
 
-# End-to-end tests
+# End-to-end tests (requires Docker Compose running)
 pytest tests/e2e/ -v
 
-# Coverage report
-pytest --cov=services --cov-report=html
+# All tests with coverage report
+pytest services/ tests/ --cov=services --cov-report=html
+open htmlcov/index.html
 ```
 
-### Test Results
-- ✅ **159 tests passing**
-- ✅ **85% code coverage**
-- ✅ **Zero critical issues**
+### Run Tests for Specific Service
+```bash
+# API service tests
+cd services/api && pytest tests/ -v
+
+# Ingestion service tests
+cd services/ingestion && pytest tests/ -v
+
+# Processing service tests
+cd services/processing && pytest tests/ -v
+
+# Aggregation service tests
+cd services/aggregation && pytest tests/ -v
+```
+
+### Quick Validation (Services Running)
+```bash
+# Test API is responding
+curl http://localhost:8000/health
+
+# Test database connection
+docker exec postgres psql -U weatherinsight -d weatherinsight -c "SELECT 1"
+
+# Test MinIO access
+docker compose exec minio-init mc ls myminio/
+
+# View API docs
+open http://localhost:8000/docs
+```
 
 ---
 
-## API Usage
+## 📊 What Is WeatherInsight?
 
-### Authentication
-```bash
-# Set API key
-export API_KEY="your-api-key-here"
+WeatherInsight is a batch data pipeline that:
+- **📥 Ingests** hourly weather observations from DWD (200+ German weather stations)
+- **🔄 Processes** raw data quarterly with Apache Spark (parsing, validation, cleaning)
+- **📊 Aggregates** 67 weather features (temperature, precipitation, wind, pressure, humidity)
+- **💾 Stores** curated features in PostgreSQL
+- **🌐 Serves** features via REST API with authentication and rate limiting
+- **📈 Monitors** with Prometheus/Grafana dashboards and alerting
+
+### Key Features
+- ✅ 159 automated tests (unit + integration + E2E)
+- ✅ 85% code coverage
+- ✅ Quarterly batch processing with Airflow orchestration
+- ✅ Data versioning and lineage tracking
+- ✅ Immutable raw storage in MinIO
+- ✅ Comprehensive monitoring and alerting
+- ✅ 8,000+ lines of documentation
+
+### Data Products
+- 🌡️ **Temperature**: mean, median, min, max, HDD, CDD, frost hours
+- 🌧️ **Precipitation**: totals, wet/dry spells, heavy events, intensity
+- 💨 **Wind**: speed stats, direction, gusts, calms
+- 🌡️ **Pressure**: means, ranges, high/low pressure hours
+- 💧 **Humidity**: means, ranges, high/low humidity hours
+
+---
+
+## 🏗️ Project Architecture
+
+```
+DWD OpenData
+    ↓
+Ingestion Service (Python)
+    ↓
+MinIO Raw Zone (immutable objects)
+    ↓
+Spark Processing (parse, clean, validate)
+    ↓
+MinIO Staging Zone (parquet files)
+    ↓
+Spark Aggregation (compute features)
+    ↓
+PostgreSQL (curated tables)
+    ↓
+FastAPI (REST endpoints)
+    ↓
+End Users / Applications
 ```
 
-### Example Requests
-```bash
-# Get API info
-curl "http://localhost:8000/api/v1/info"
+### Orchestration & Monitoring
+- **Airflow**: Quarterly pipeline scheduling
+- **Prometheus**: Metrics collection
+- **Grafana**: Dashboards & visualization
+- **Alertmanager**: Alert routing & management
 
-# List stations
-curl "http://localhost:8000/api/v1/stations?limit=10" \
-  -H "X-API-Key: $API_KEY"
+---
+
+## 📚 Tech Stack
+
+| Component | Technology |
+|-----------|-----------|
+| Data Ingestion | Python 3.11 |
+| Object Storage | MinIO (S3-compatible) |
+| Batch Processing | Apache Spark 3.4 |
+| Database | PostgreSQL 15 |
+| Orchestration | Apache Airflow 2.8 |
+| API Service | FastAPI 0.104 |
+| Monitoring | Prometheus + Grafana |
+| Containerization | Docker & Docker Compose |
+| Testing | pytest |
+
+---
+
+## 🔍 API Usage
+
+The project exposes REST endpoints to query weather features. All requests require an API key.
+
+```bash
+# List all stations
+curl "http://localhost:8000/api/v1/stations" \
+  -H "X-API-Key: dev-key-12345"
 
 # Get temperature features for Q1 2023
-curl "http://localhost:8000/api/v1/features/temperature?year=2023&quarter=1&limit=10" \
-  -H "X-API-Key: $API_KEY"
+curl "http://localhost:8000/api/v1/features/temperature?year=2023&quarter=1" \
+  -H "X-API-Key: dev-key-12345"
 
-# Get station time series
-curl "http://localhost:8000/api/v1/features/temperature/stations/433" \
-  -H "X-API-Key: $API_KEY"
-
-# Get all products
-curl "http://localhost:8000/api/v1/features/products" \
-  -H "X-API-Key: $API_KEY"
+# Get features for a specific station
+curl "http://localhost:8000/api/v1/features/temperature/stations/00433" \
+  -H "X-API-Key: dev-key-12345"
 ```
 
-### Interactive Documentation
-Open http://localhost:8000/docs for Swagger UI
+**Interactive Docs**: Open http://localhost:8000/docs (Swagger UI)
 
 ---
 
-## Monitoring
+## 📊 Monitoring & Dashboards
 
-### Dashboards
-Access Grafana at http://localhost:3002 (admin/admin123)
+Access Grafana at http://localhost:3002 (admin / admin123)
 
-1. **Pipeline Overview** - DAG runs, task durations, throughput
-2. **API Performance** - Request rates, latency, errors
-3. **Data Quality** - Completeness, validation results
-4. **Infrastructure** - CPU, memory, disk, network
+Available dashboards:
+- **Pipeline Overview**: DAG runs, task durations, throughput
+- **API Performance**: Request rates, latency, error rates
+- **Data Quality**: Feature completeness and validation
+- **Infrastructure**: CPU, memory, disk, network usage
 
-### Alerts
-Alertmanager at http://localhost:9093
-
-**Critical Alerts**:
-- Service down > 5 minutes
-- Database unavailable
-- API error rate > 5%
-- Disk space > 95%
-
-**Warning Alerts**:
-- High latency > 500ms
-- Memory pressure > 85%
-- Data quality issues
+Prometheus at http://localhost:9090 for raw metrics queries.
 
 ---
 
-## Support & Contacts
+## 🔧 Common Commands
 
-### For Operations Issues
-- **On-Call**: oncall@example.com
-- **Operations Lead**: ops-lead@example.com
-
-### For Development
-- **Backend Lead**: backend-lead@example.com
-- **Data Engineer**: data-engineer@example.com
-- **DevOps**: devops@example.com
-
-### External Resources
-- **DWD OpenData**: https://opendata.dwd.de
-- **Airflow Docs**: https://airflow.apache.org/docs/
-- **FastAPI Docs**: https://fastapi.tiangolo.com/
-
----
-
-## Troubleshooting
-
-### Service Won't Start
 ```bash
-# Check logs
-docker-compose logs <service> --tail=100
+# View service logs
+docker compose logs -f <service>          # Follow logs
+docker compose logs --tail=100 <service>  # Last 100 lines
 
-# Restart service
-docker-compose restart <service>
-```
+# Access database
+docker exec postgres psql -U weatherinsight -d weatherinsight
+# Then: SELECT * FROM station_metadata LIMIT 10;
 
-### Database Issues
-```bash
-# Check connections
-docker exec postgres psql -U postgres -c \
-  "SELECT count(*), state FROM pg_stat_activity GROUP BY state;"
-```
-
-### Pipeline Stuck
-```bash
 # Check Airflow
 open http://localhost:8080
 
-# Clear task
-docker exec airflow-scheduler airflow tasks clear \
-  weatherinsight_quarterly_pipeline <task_id> <date>
-```
+# Restart a service
+docker compose restart <service>
 
-**Full Guide**: See [INCIDENT_RESPONSE.md](docs/INCIDENT_RESPONSE.md)
+# View disk usage
+docker system df -v
+
+# Clean up (removes all data!)
+docker compose down -v
+```
 
 ---
 
-## Contributing
+## 🐛 Troubleshooting
+
+### Services won't start
+```bash
+# Check logs
+docker compose logs <service> --tail=50
+
+# Restart services
+docker compose restart
+
+# Check if ports are in use
+lsof -i :8000   # API
+lsof -i :8080   # Airflow
+lsof -i :5432   # PostgreSQL
+```
+
+### Database connection errors
+```bash
+# Check database is running
+docker compose ps postgres
+
+# Test connection
+docker exec postgres psql -U weatherinsight -d weatherinsight -c "SELECT 1"
+```
+
+### MinIO not accessible
+```bash
+# Check MinIO health
+curl http://localhost:9000/minio/health/live
+
+# List buckets
+docker compose exec minio-init mc ls myminio/
+```
+
+### Tests failing
+```bash
+# Run specific test with verbose output
+pytest services/api/tests/test_api.py::test_health -vv
+
+# Run with print statements
+pytest -s services/api/tests/
+
+# Check for missing dependencies
+pip install -r services/<service>/requirements.txt
+```
+
+---
+
+## 📖 Documentation
+
+### For Getting Started
+- This README for quick overview and setup
+- [NEXT_STEPS.md](NEXT_STEPS.md) for development context
+
+### For Understanding the System
+- [docs/requirements.md](docs/requirements.md) - System requirements
+- [docs/IMPLEMENTATION_PLAN.md](docs/IMPLEMENTATION_PLAN.md) - 9-phase plan
+- [docs/DATA_CONTRACTS.md](docs/DATA_CONTRACTS.md) - Data schemas & validation
+
+### For Operations
+- [docs/runbook.md](docs/runbook.md) - Quick reference commands
+- [docs/OPERATIONS_HANDOVER.md](docs/OPERATIONS_HANDOVER.md) - Daily operations
+- [docs/MONITORING_GUIDE.md](docs/MONITORING_GUIDE.md) - Monitoring setup
+- [docs/INCIDENT_RESPONSE.md](docs/INCIDENT_RESPONSE.md) - Incident handling
+
+### For Development
+- [docs/TESTING_STRATEGY.md](docs/TESTING_STRATEGY.md) - Testing approach
+- [services/api/README.md](services/api/README.md) - API service docs
+- [services/ingestion/README.md](services/ingestion/README.md) - Ingestion service
+- [services/processing/README.md](services/processing/README.md) - Processing service
+
+---
+
+## 📈 Key Metrics
+
+### Data
+- **Stations**: 200-300 active weather stations in Germany
+- **Coverage**: Historical data from 2019 onwards
+- **Frequency**: Hourly observations updated quarterly
+- **Features**: 67 computed features per station per quarter
+
+### Testing
+- **Tests**: 159 total (106 unit, 30 integration, 23 E2E)
+- **Coverage**: 85% of critical code paths
+- **Status**: All tests passing
+
+### Performance
+- **API Latency**: p95 < 200ms, p99 < 500ms
+- **API Throughput**: 100+ requests/second
+- **Uptime**: 99.5%+ capability
+- **Batch Runtime**: ~2-4 hours per quarter
+
+---
+
+## 🤝 Contributing
 
 ### Code Standards
 - Python 3.11+
 - Type hints required
-- Black formatting
-- Pytest for tests
-- >80% test coverage
+- Black code formatting
+- Pytest for all tests
+- >80% test coverage required
 
 ### Before Committing
 ```bash
 # Format code
 black services/
 
-# Run tests
-pytest services/*/tests/ -v
+# Run linter
+pylint services/*/src/
+
+# Run type checker
+mypy services/*/src/
+
+# Run all tests
+pytest services/ tests/ -v
 
 # Check coverage
 pytest --cov=services --cov-report=term
@@ -450,37 +359,34 @@ pytest --cov=services --cov-report=term
 
 ---
 
-## License
+## ❓ Getting Help
 
-[Add your license here]
+### Documentation
+- Check the [docs/](docs/) folder for detailed guides
+- Search [docs/INCIDENT_RESPONSE.md](docs/INCIDENT_RESPONSE.md) for common issues
+
+### Common Issues
+1. **Port already in use**: Change ports in `.env` or stop conflicting services
+2. **Out of memory**: Allocate more RAM to Docker in Docker Desktop settings
+3. **Database won't connect**: Ensure PostgreSQL container is healthy (`docker compose ps`)
+
+### Project Links
+- **DWD Open Data**: https://opendata.dwd.de/
+- **Apache Airflow**: https://airflow.apache.org/docs/
+- **FastAPI**: https://fastapi.tiangolo.com/
+- **GitHub**: https://github.com/Pranavraut033/WeatherInSight
 
 ---
 
-## Acknowledgments
+## ✨ Project Status
 
-- **DWD (Deutscher Wetterdienst)** for providing open weather data
-- **Apache Airflow** for orchestration
-- **Apache Spark** for distributed processing
-- **FastAPI** for modern Python API framework
-- **Prometheus & Grafana** for monitoring
+- **Phase 1**: ✅ Architecture & requirements (Complete)
+- **Phase 2**: ✅ Development & implementation (Complete)
+- **All 9 Milestones**: ✅ Complete
+- **Production Status**: ✅ Ready to deploy
 
----
-
-## Project Timeline
-
-**Started**: Planning phase  
-**M0-M7 Completed**: Core functionality  
-**M8 Completed**: Quality assurance and observability  
-**M9 Completed**: Documentation and handover  
-**Status**: ✅ **PRODUCTION READY**  
 **Completed**: February 8, 2026
 
 ---
 
-## 🚀 Ready for Production!
-
-The WeatherInsight system is complete and ready for deployment. Follow the [Production Deployment Guide](docs/PRODUCTION_DEPLOYMENT.md) to get started.
-
-For questions or support, contact the operations team.
-
-**Happy Weather Data Engineering! ☁️🌤️⛈️**
+**Ready to get started? Run `docker compose up -d` and visit http://localhost:8000/docs! ☁️**
