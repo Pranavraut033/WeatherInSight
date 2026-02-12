@@ -1,0 +1,310 @@
+#!/usr/bin/env python3
+"""CLI tools for metadata management."""
+import sys
+import json
+import argparse
+from datetime import datetime
+from typing import Optional
+
+from config import get_config
+from schema_registry import SchemaRegistry
+from dataset_versioning import DatasetVersioning, DatasetStatus
+
+
+def register_schema_cmd(args):
+    """Register a new schema version."""
+    config = get_config()
+    registry = SchemaRegistry(config.postgres_dsn)
+    
+    # Load schema definition
+    with open(args.schema_file, 'r') as f:
+        schema_def = json.load(f)
+    
+    version = registry.register_schema(
+        schema_name=args.name,
+        schema_def=schema_def,
+        description=args.description,
+        compatibility_mode=args.compatibility,
+        created_by=args.created_by
+    )
+    
+    print(f"✓ Registered schema '{args.name}' version {version}")
+    return 0
+
+
+def get_schema_cmd(args):
+    """Get schema definition."""
+    config = get_config()
+    registry = SchemaRegistry(config.postgres_dsn)
+    
+    schema = registry.get_schema(args.name, args.version)
+    
+    if not schema:
+        print(f"✗ Schema '{args.name}' not found", file=sys.stderr)
+        return 1
+    
+    if args.output_format == "json":
+        print(json.dumps(schema, indent=2, default=str))
+    else:
+        print(f"Schema: {schema['schema_name']} v{schema['version']}")
+        print(f"Compatibility: {schema['compatibility_mode']}")
+        print(f"Created: {schema['created_at']} by {schema['created_by']}")
+        if schema['description']:
+            print(f"Description: {schema['description']}")
+        print(f"\nDefinition:")
+        print(json.dumps(schema['schema_definition'], indent=2))
+    
+    return 0
+
+
+def list_schemas_cmd(args):
+    """List all schemas."""
+    config = get_config()
+    registry = SchemaRegistry(config.postgres_dsn)
+    
+    schemas = registry.list_schemas()
+    
+    if args.output_format == "json":
+        print(json.dumps(schemas, indent=2, default=str))
+    else:
+        print(f"{'Schema Name':<30} {'Version':<10} {'Compatibility':<15} {'Created':<20}")
+        print("-" * 80)
+        for schema in schemas:
+            print(f"{schema['schema_name']:<30} "
+                  f"{schema['version']:<10} "
+                  f"{schema['compatibility_mode']:<15} "
+                  f"{str(schema['created_at']):<20}")
+    
+    return 0
+
+
+def schema_history_cmd(args):
+    """Show schema version history."""
+    config = get_config()
+    registry = SchemaRegistry(config.postgres_dsn)
+    
+    history = registry.get_schema_history(args.name)
+    
+    if not history:
+        print(f"✗ No versions found for schema '{args.name}'", file=sys.stderr)
+        return 1
+    
+    if args.output_format == "json":
+        print(json.dumps(history, indent=2, default=str))
+    else:
+        print(f"Schema: {args.name}")
+        print(f"\n{'Version':<10} {'Active':<10} {'Created':<20} {'By':<15} {'Description':<40}")
+        print("-" * 100)
+        for version in history:
+            print(f"{version['version']:<10} "
+                  f"{'✓' if version['is_active'] else '✗':<10} "
+                  f"{str(version['created_at']):<20} "
+                  f"{version['created_by']:<15} "
+                  f"{(version['description'] or '')[:40]:<40}")
+    
+    return 0
+
+
+def create_dataset_version_cmd(args):
+    """Create a new dataset version."""
+    config = get_config()
+    versioning = DatasetVersioning(config.postgres_dsn)
+    
+    metadata = {}
+    if args.metadata:
+        metadata = json.loads(args.metadata)
+    
+    version_id = versioning.create_version(
+        dataset_name=args.dataset_name,
+        version=args.version,
+        schema_name=args.schema_name,
+        schema_version=args.schema_version,
+        ingestion_run_id=args.ingestion_run_id,
+        start_date=datetime.fromisoformat(args.start_date) if args.start_date else None,
+        end_date=datetime.fromisoformat(args.end_date) if args.end_date else None,
+        storage_location=args.storage_location,
+        metadata=metadata,
+        created_by=args.created_by
+    )
+    
+    print(f"✓ Created dataset version ID: {version_id}")
+    return 0
+
+
+def update_dataset_status_cmd(args):
+    """Update dataset version status."""
+    config = get_config()
+    versioning = DatasetVersioning(config.postgres_dsn)
+    
+    quality_metrics = None
+    if args.quality_metrics:
+        quality_metrics = json.loads(args.quality_metrics)
+    
+    versioning.update_version_status(
+        version_id=args.version_id,
+        status=DatasetStatus(args.status),
+        record_count=args.record_count,
+        file_count=args.file_count,
+        total_size_bytes=args.total_size_bytes,
+        quality_metrics=quality_metrics
+    )
+    
+    print(f"✓ Updated dataset version {args.version_id} to status: {args.status}")
+    return 0
+
+
+def list_datasets_cmd(args):
+    """List dataset versions."""
+    config = get_config()
+    versioning = DatasetVersioning(config.postgres_dsn)
+    
+    status = DatasetStatus(args.status) if args.status else None
+    versions = versioning.list_versions(args.dataset_name, status)
+    
+    if args.output_format == "json":
+        print(json.dumps(versions, indent=2, default=str))
+    else:
+        print(f"{'Dataset':<25} {'Version':<15} {'Status':<12} {'Records':<12} {'Created':<20}")
+        print("-" * 90)
+        for v in versions:
+            print(f"{v['dataset_name']:<25} "
+                  f"{v['version']:<15} "
+                  f"{v['status']:<12} "
+                  f"{str(v['record_count'] or '-'):<12} "
+                  f"{str(v['created_at']):<20}")
+    
+    return 0
+
+
+def show_lineage_cmd(args):
+    """Show dataset lineage."""
+    config = get_config()
+    versioning = DatasetVersioning(config.postgres_dsn)
+    
+    lineage = versioning.get_lineage(args.version_id, args.direction)
+    
+    if args.output_format == "json":
+        print(json.dumps(lineage, indent=2, default=str))
+    else:
+        if "parents" in lineage:
+            print("Upstream (Parents):")
+            if lineage["parents"]:
+                for parent in lineage["parents"]:
+                    print(f"  ← {parent['dataset_name']} v{parent['version']} "
+                          f"({parent['transformation_type']})")
+            else:
+                print("  (none)")
+        
+        if "children" in lineage:
+            print("\nDownstream (Children):")
+            if lineage["children"]:
+                for child in lineage["children"]:
+                    print(f"  → {child['dataset_name']} v{child['version']} "
+                          f"({child['transformation_type']})")
+            else:
+                print("  (none)")
+    
+    return 0
+
+
+def main():
+    """Main CLI entry point."""
+    parser = argparse.ArgumentParser(
+        description="WeatherInsight Metadata Management CLI"
+    )
+    parser.add_argument(
+        "--output-format", "-o",
+        choices=["text", "json"],
+        default="text",
+        help="Output format"
+    )
+    
+    subparsers = parser.add_subparsers(dest="command", help="Command")
+    
+    # Schema commands
+    schema_parser = subparsers.add_parser("schema", help="Schema management")
+    schema_sub = schema_parser.add_subparsers(dest="subcommand")
+    
+    # schema register
+    register = schema_sub.add_parser("register", help="Register new schema")
+    register.add_argument("--name", required=True, help="Schema name")
+    register.add_argument("--schema-file", required=True, help="Schema JSON file")
+    register.add_argument("--description", help="Description")
+    register.add_argument("--compatibility", default="BACKWARD",
+                         choices=["BACKWARD", "FORWARD", "FULL", "NONE"])
+    register.add_argument("--created-by", default="cli", help="Creator")
+    register.set_defaults(func=register_schema_cmd)
+    
+    # schema get
+    get = schema_sub.add_parser("get", help="Get schema definition")
+    get.add_argument("--name", required=True, help="Schema name")
+    get.add_argument("--version", type=int, help="Specific version (default: latest)")
+    get.set_defaults(func=get_schema_cmd)
+    
+    # schema list
+    list_schemas = schema_sub.add_parser("list", help="List all schemas")
+    list_schemas.set_defaults(func=list_schemas_cmd)
+    
+    # schema history
+    history = schema_sub.add_parser("history", help="Show schema history")
+    history.add_argument("--name", required=True, help="Schema name")
+    history.set_defaults(func=schema_history_cmd)
+    
+    # Dataset commands
+    dataset_parser = subparsers.add_parser("dataset", help="Dataset management")
+    dataset_sub = dataset_parser.add_subparsers(dest="subcommand")
+    
+    # dataset create
+    create = dataset_sub.add_parser("create", help="Create dataset version")
+    create.add_argument("--dataset-name", required=True, help="Dataset name")
+    create.add_argument("--version", required=True, help="Version identifier")
+    create.add_argument("--schema-name", help="Schema name")
+    create.add_argument("--schema-version", type=int, help="Schema version")
+    create.add_argument("--ingestion-run-id", type=int, help="Ingestion run ID")
+    create.add_argument("--start-date", help="Start date (ISO format)")
+    create.add_argument("--end-date", help="End date (ISO format)")
+    create.add_argument("--storage-location", help="Storage location")
+    create.add_argument("--metadata", help="Metadata JSON")
+    create.add_argument("--created-by", default="cli", help="Creator")
+    create.set_defaults(func=create_dataset_version_cmd)
+    
+    # dataset update-status
+    update = dataset_sub.add_parser("update-status", help="Update dataset status")
+    update.add_argument("--version-id", type=int, required=True, help="Version ID")
+    update.add_argument("--status", required=True,
+                       choices=["pending", "processing", "available", "deprecated", "failed"])
+    update.add_argument("--record-count", type=int, help="Record count")
+    update.add_argument("--file-count", type=int, help="File count")
+    update.add_argument("--total-size-bytes", type=int, help="Total size in bytes")
+    update.add_argument("--quality-metrics", help="Quality metrics JSON")
+    update.set_defaults(func=update_dataset_status_cmd)
+    
+    # dataset list
+    list_datasets = dataset_sub.add_parser("list", help="List dataset versions")
+    list_datasets.add_argument("--dataset-name", help="Filter by dataset name")
+    list_datasets.add_argument("--status", help="Filter by status")
+    list_datasets.set_defaults(func=list_datasets_cmd)
+    
+    # dataset lineage
+    lineage = dataset_sub.add_parser("lineage", help="Show dataset lineage")
+    lineage.add_argument("--version-id", type=int, required=True, help="Version ID")
+    lineage.add_argument("--direction", choices=["upstream", "downstream", "both"],
+                        default="both", help="Lineage direction")
+    lineage.set_defaults(func=show_lineage_cmd)
+    
+    # Parse and execute
+    args = parser.parse_args()
+    
+    if not hasattr(args, 'func'):
+        parser.print_help()
+        return 1
+    
+    try:
+        return args.func(args)
+    except Exception as e:
+        print(f"✗ Error: {e}", file=sys.stderr)
+        return 1
+
+
+if __name__ == "__main__":
+    sys.exit(main())
