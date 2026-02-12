@@ -1,0 +1,38 @@
+version: "3.8"
+
+services:
+  airflow-init:
+    profiles: ["airflow"]
+
+  airflow-webserver:
+    profiles: ["airflow"]
+
+  airflow-scheduler:
+    profiles: ["airflow"]
+
+  airflow-worker:
+    profiles: ["airflow"]
+
+  spark-master:
+    profiles: ["spark"]
+
+  spark-worker:
+    profiles: ["spark"]
+    environment:
+      SPARK_WORKER_MEMORY: ${SPARK_WORKER_MEMORY:-2G}
+      SPARK_WORKER_CORES: ${SPARK_WORKER_CORES:-2}
+
+  postgres-exporter:
+    profiles: ["monitoring"]
+
+  airflow-statsd-exporter:
+    profiles: ["monitoring"]
+
+  prometheus:
+    profiles: ["monitoring"]
+
+  alertmanager:
+    profiles: ["monitoring"]
+
+  grafana:
+    profiles: ["monitoring"]
