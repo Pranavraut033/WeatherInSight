@@ -1,0 +1,9 @@
+WeatherInsight – Batch Data Architecture for Germany (DWD Weather → ML Features)
+
+WeatherInsight is a microservice-oriented **batch-processing backend** for a data-intensive machine learning use case: generating quarterly feature datasets for forecasting (e.g., renewable generation / demand proxies) using **Germany-based, time-referenced observations** from the **Deutscher Wetterdienst (DWD) Open Data** portal. The system targets **>1,000,000 timestamped records** (hourly station measurements across many stations and years).
+
+The pipeline starts with an **Ingestion Service** that downloads or incrementally syncs DWD files, validates file hashes, and stores the raw, immutable dataset in an object store (**MinIO**, S3-compatible). A **Metadata & Governance Service** registers schemas and versions (dataset date, station IDs, columns) to make changes explicit and traceable (reliability/maintainability as discussed in data-intensive system design).
+
+For execution, a **Batch Orchestrator** (Apache Airflow) triggers quarterly runs. A **Processing Service** (Apache Spark in batch mode) performs parsing, missing-value handling, unit normalization, and joins with station metadata. The **Aggregation Service** produces quarterly aggregates and ML-ready features (e.g., temperature means, precipitation sums, missingness ratios) and writes curated tables to **PostgreSQL (warehouse/mart)**.
+
+Finally, a **Delivery API** (FastAPI) exposes feature tables for downstream training jobs. Dockerized microservices, logging/monitoring, least-privilege credentials, and TLS inside the compose network support reproducibility, security, and governance.

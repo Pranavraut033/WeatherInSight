@@ -1,0 +1,25 @@
+================================================================================
+PHASE 2: DEVELOPMENT/REFLECTION SUBMISSION
+WeatherInsight - Batch-Processing-Based Data Architecture
+================================================================================
+
+Name: Pranav Virendra Raut
+Matriculation Number: 4243697
+Course: Data Engineering (DLMDSEDE02)
+GitHub: https://github.com/Pranavraut033/WeatherInSight
+
+================================================================================
+SUBMISSION CHECKLIST
+================================================================================
+
+- Microservices: ingestion, metadata, processing, aggregation, orchestrator, api
+- Docker Compose: local deployment functional
+- Requirements met: reliability, scalability, maintainability, security, governance
+- Data: 1M+ DWD hourly observations ingested and processed
+- Tests: unit and e2e validation included
+- Documentation: runbook, schemas, testing strategy
+- Git repository: active with version control
+
+================================================================================
+Submission Date: 12 February 2026
+================================================================================
