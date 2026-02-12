@@ -1,0 +1,386 @@
+{
+  "dashboard": {
+    "title": "WeatherInsight - Data Quality",
+    "uid": "weatherinsight-quality",
+    "version": 1,
+    "timezone": "utc",
+    "editable": true,
+    "graphTooltip": 1,
+    "time": {
+      "from": "now-30d",
+      "to": "now"
+    },
+    "refresh": "5m",
+    "tags": ["weatherinsight", "quality", "data"],
+    "panels": [
+      {
+        "id": 1,
+        "title": "Feature Table Row Counts",
+        "type": "graph",
+        "gridPos": { "x": 0, "y": 0, "w": 24, "h": 8 },
+        "targets": [
+          {
+            "expr": "sum(increase(weatherinsight_api_requests_total{endpoint=~\".*/features/temperature.*\",status=~\"2..\"}[1h]))",
+            "legendFormat": "Temperature Features",
+            "refId": "A"
+          },
+          {
+            "expr": "sum(increase(weatherinsight_api_requests_total{endpoint=~\".*/features/precipitation.*\",status=~\"2..\"}[1h]))",
+            "legendFormat": "Precipitation Features",
+            "refId": "B"
+          },
+          {
+            "expr": "sum(increase(weatherinsight_api_requests_total{endpoint=~\".*/features/wind.*\",status=~\"2..\"}[1h]))",
+            "legendFormat": "Wind Features",
+            "refId": "C"
+          },
+          {
+            "expr": "sum(increase(weatherinsight_api_requests_total{endpoint=~\".*/features/pressure.*\",status=~\"2..\"}[1h]))",
+            "legendFormat": "Pressure Features",
+            "refId": "D"
+          },
+          {
+            "expr": "sum(increase(weatherinsight_api_requests_total{endpoint=~\".*/features/humidity.*\",status=~\"2..\"}[1h]))",
+            "legendFormat": "Humidity Features",
+            "refId": "E"
+          }
+        ],
+        "yaxes": [
+          { "format": "short", "label": "Successful Queries" },
+          { "format": "short" }
+        ],
+        "lines": true,
+        "fill": 1,
+        "linewidth": 2,
+        "legend": {
+          "show": true,
+          "values": true,
+          "alignAsTable": true,
+          "current": true,
+          "total": true,
+          "avg": true
+        }
+      },
+      {
+        "id": 2,
+        "title": "Temperature Features - Row Count",
+        "type": "stat",
+        "gridPos": { "x": 0, "y": 8, "w": 6, "h": 4 },
+        "targets": [
+          {
+            "expr": "sum(increase(weatherinsight_api_requests_total{endpoint=~\".*/features/temperature\",status=~\"2..\"}[24h]))",
+            "legendFormat": "24h Total",
+            "refId": "A"
+          }
+        ],
+        "options": {
+          "colorMode": "value",
+          "graphMode": "area",
+          "orientation": "auto"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "unit": "short",
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                { "value": 0, "color": "red" },
+                { "value": 100, "color": "yellow" },
+                { "value": 1000, "color": "green" }
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 3,
+        "title": "Precipitation Features - Row Count",
+        "type": "stat",
+        "gridPos": { "x": 6, "y": 8, "w": 6, "h": 4 },
+        "targets": [
+          {
+            "expr": "sum(increase(weatherinsight_api_requests_total{endpoint=~\".*/features/precipitation\",status=~\"2..\"}[24h]))",
+            "legendFormat": "24h Total",
+            "refId": "A"
+          }
+        ],
+        "options": {
+          "colorMode": "value",
+          "graphMode": "area",
+          "orientation": "auto"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "unit": "short",
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                { "value": 0, "color": "red" },
+                { "value": 100, "color": "yellow" },
+                { "value": 1000, "color": "green" }
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 4,
+        "title": "Wind Features - Row Count",
+        "type": "stat",
+        "gridPos": { "x": 12, "y": 8, "w": 6, "h": 4 },
+        "targets": [
+          {
+            "expr": "sum(increase(weatherinsight_api_requests_total{endpoint=~\".*/features/wind\",status=~\"2..\"}[24h]))",
+            "legendFormat": "24h Total",
+            "refId": "A"
+          }
+        ],
+        "options": {
+          "colorMode": "value",
+          "graphMode": "area",
+          "orientation": "auto"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "unit": "short",
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                { "value": 0, "color": "red" },
+                { "value": 100, "color": "yellow" },
+                { "value": 1000, "color": "green" }
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 5,
+        "title": "Pressure Features - Row Count",
+        "type": "stat",
+        "gridPos": { "x": 18, "y": 8, "w": 6, "h": 4 },
+        "targets": [
+          {
+            "expr": "sum(increase(weatherinsight_api_requests_total{endpoint=~\".*/features/pressure\",status=~\"2..\"}[24h]))",
+            "legendFormat": "24h Total",
+            "refId": "A"
+          }
+        ],
+        "options": {
+          "colorMode": "value",
+          "graphMode": "area",
+          "orientation": "auto"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "unit": "short",
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                { "value": 0, "color": "red" },
+                { "value": 100, "color": "yellow" },
+                { "value": 1000, "color": "green" }
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 6,
+        "title": "Data Freshness (Time Since Last Update)",
+        "type": "graph",
+        "gridPos": { "x": 0, "y": 12, "w": 12, "h": 8 },
+        "targets": [
+          {
+            "expr": "time() - max(timestamp(weatherinsight_api_requests_total{status=~\"2..\"})) by (endpoint)",
+            "legendFormat": "{{endpoint}}",
+            "refId": "A"
+          }
+        ],
+        "yaxes": [
+          { "format": "s", "label": "Time Since Update" },
+          { "format": "short" }
+        ],
+        "lines": true,
+        "fill": 0,
+        "linewidth": 2,
+        "alert": {
+          "conditions": [
+            {
+              "evaluator": {
+                "params": [86400],
+                "type": "gt"
+              },
+              "operator": {
+                "type": "and"
+              },
+              "query": {
+                "params": ["A", "5m", "now"]
+              },
+              "reducer": {
+                "params": [],
+                "type": "avg"
+              },
+              "type": "query"
+            }
+          ],
+          "executionErrorState": "alerting",
+          "frequency": "300s",
+          "handler": 1,
+          "name": "Stale Data (>24h)",
+          "noDataState": "alerting",
+          "notifications": []
+        },
+        "legend": {
+          "show": true,
+          "values": true,
+          "current": true,
+          "max": true
+        }
+      },
+      {
+        "id": 7,
+        "title": "Station Coverage Trend",
+        "type": "graph",
+        "gridPos": { "x": 12, "y": 12, "w": 12, "h": 8 },
+        "targets": [
+          {
+            "expr": "sum(increase(weatherinsight_api_requests_total{endpoint=~\".*/stations\",status=~\"2..\"}[1h]))",
+            "legendFormat": "Station Queries",
+            "refId": "A"
+          }
+        ],
+        "yaxes": [
+          { "format": "short", "label": "Unique Stations" },
+          { "format": "short" }
+        ],
+        "lines": true,
+        "fill": 1,
+        "linewidth": 2,
+        "legend": {
+          "show": true,
+          "values": true,
+          "current": true,
+          "avg": true,
+          "min": true,
+          "max": true
+        }
+      },
+      {
+        "id": 8,
+        "title": "Data Quality Score",
+        "type": "gauge",
+        "gridPos": { "x": 0, "y": 20, "w": 12, "h": 8 },
+        "targets": [
+          {
+            "expr": "(sum(rate(weatherinsight_api_requests_total{status=~\"2..\"}[5m])) / sum(rate(weatherinsight_api_requests_total[5m]))) * 100",
+            "legendFormat": "Overall Quality",
+            "refId": "A"
+          }
+        ],
+        "options": {
+          "showThresholdLabels": true,
+          "showThresholdMarkers": true
+        },
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percent",
+            "min": 0,
+            "max": 100,
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                { "value": 0, "color": "red" },
+                { "value": 80, "color": "orange" },
+                { "value": 95, "color": "yellow" },
+                { "value": 99, "color": "green" }
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 9,
+        "title": "Quality Check Results Timeline",
+        "type": "graph",
+        "gridPos": { "x": 12, "y": 20, "w": 12, "h": 8 },
+        "targets": [
+          {
+            "expr": "sum(rate(weatherinsight_api_requests_total{status=\"200\"}[5m]))",
+            "legendFormat": "Passed",
+            "refId": "A"
+          },
+          {
+            "expr": "sum(rate(weatherinsight_api_requests_total{status!~\"2..\"}[5m]))",
+            "legendFormat": "Failed",
+            "refId": "B"
+          }
+        ],
+        "yaxes": [
+          { "format": "reqps", "label": "Check Rate" },
+          { "format": "short" }
+        ],
+        "lines": true,
+        "fill": 2,
+        "linewidth": 2,
+        "seriesOverrides": [
+          {
+            "alias": "Passed",
+            "color": "green"
+          },
+          {
+            "alias": "Failed",
+            "color": "red"
+          }
+        ],
+        "legend": {
+          "show": true,
+          "values": true,
+          "alignAsTable": true,
+          "current": true,
+          "total": true,
+          "avg": true
+        }
+      }
+    ],
+    "templating": {
+      "list": [
+        {
+          "name": "datasource",
+          "type": "datasource",
+          "query": "prometheus",
+          "current": {
+            "text": "Prometheus",
+            "value": "Prometheus"
+          }
+        },
+        {
+          "name": "product",
+          "type": "custom",
+          "query": "temperature,precipitation,wind,pressure,humidity",
+          "multi": true,
+          "includeAll": true,
+          "current": {
+            "text": "All",
+            "value": "$__all"
+          }
+        }
+      ]
+    },
+    "annotations": {
+      "list": [
+        {
+          "datasource": "$datasource",
+          "enable": true,
+          "expr": "ALERTS{alertstate=\"firing\", alertname=~\".*Quality.*\"}",
+          "iconColor": "orange",
+          "name": "Quality Alerts",
+          "step": "60s",
+          "titleFormat": "{{alertname}}",
+          "type": "tags"
+        }
+      ]
+    }
+  },
+  "overwrite": true
+}

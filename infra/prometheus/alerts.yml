@@ -1,0 +1,204 @@
+# WeatherInsight Prometheus Alert Rules
+
+groups:
+  - name: weatherinsight_api
+    interval: 30s
+    rules:
+      - alert: APIHighErrorRate
+        expr: |
+          (
+            sum(rate(weatherinsight_api_requests_total{status=~"5.."}[5m]))
+            /
+            sum(rate(weatherinsight_api_requests_total[5m]))
+          ) * 100 > 5
+        for: 5m
+        labels:
+          severity: critical
+          service: api
+        annotations:
+          summary: "High API error rate detected"
+          description: "API error rate is {{ $value | humanizePercentage }} (threshold: 5%)"
+          
+      - alert: APIHighLatency
+        expr: |
+          histogram_quantile(0.95,
+            sum(rate(weatherinsight_api_request_duration_seconds_bucket[5m])) by (le, endpoint)
+          ) > 2.0
+        for: 10m
+        labels:
+          severity: warning
+          service: api
+        annotations:
+          summary: "API latency is high"
+          description: "API P95 latency is {{ $value }}s on endpoint {{ $labels.endpoint }} (threshold: 2s)"
+          
+      - alert: APIDown
+        expr: up{job="weatherinsight-api"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: api
+        annotations:
+          summary: "API service is down"
+          description: "WeatherInsight API has been down for more than 1 minute"
+          
+      - alert: APILowRequestRate
+        expr: sum(rate(weatherinsight_api_requests_total[5m])) < 0.01
+        for: 15m
+        labels:
+          severity: warning
+          service: api
+        annotations:
+          summary: "Unusually low API request rate"
+          description: "API receiving fewer than 0.01 req/s for 15 minutes - may indicate upstream issues"
+
+  - name: weatherinsight_database
+    interval: 30s
+    rules:
+      - alert: DatabaseSlowQueries
+        expr: |
+          histogram_quantile(0.95,
+            sum(rate(weatherinsight_api_db_query_duration_seconds_bucket[5m])) by (le, operation)
+          ) > 1.0
+        for: 10m
+        labels:
+          severity: warning
+          service: postgres
+        annotations:
+          summary: "Slow database queries detected"
+          description: "Database query P95 latency is {{ $value }}s for {{ $labels.operation }} (threshold: 1s)"
+          
+      - alert: DatabaseConnectionPoolExhausted
+        expr: |
+          sum(weatherinsight_api_db_query_duration_seconds_count) by (operation) > 1000
+        for: 5m
+        labels:
+          severity: critical
+          service: postgres
+        annotations:
+          summary: "High database query volume"
+          description: "Database receiving {{ $value }} queries/min - connection pool may be exhausted"
+
+  - name: weatherinsight_data_quality
+    interval: 60s
+    rules:
+      - alert: DataQualityCheckFailed
+        expr: |
+          sum(rate(weatherinsight_api_requests_total{endpoint=~".*/features.*", status!~"2.."}[10m]))
+          /
+          sum(rate(weatherinsight_api_requests_total{endpoint=~".*/features.*"}[10m]))
+          > 0.1
+        for: 10m
+        labels:
+          severity: warning
+          service: quality
+        annotations:
+          summary: "Data quality check failure rate high"
+          description: "{{ $value | humanizePercentage }} of feature queries failing (threshold: 10%)"
+          
+      - alert: StaleData
+        expr: |
+          (time() - max(timestamp(weatherinsight_api_requests_total{status=~"2.."})) by (endpoint)) > 86400
+        for: 1h
+        labels:
+          severity: warning
+          service: quality
+        annotations:
+          summary: "Data appears stale"
+          description: "No successful requests for {{ $labels.endpoint }} in over 24 hours"
+          
+      - alert: LowStationCoverage
+        expr: |
+          sum(increase(weatherinsight_api_requests_total{endpoint=~".*/stations"}[1h])) < 10
+        for: 2h
+        labels:
+          severity: info
+          service: quality
+        annotations:
+          summary: "Low station query volume"
+          description: "Station endpoint receiving fewer queries than expected"
+
+  - name: weatherinsight_infrastructure
+    interval: 30s
+    rules:
+      - alert: HighCPUUsage
+        expr: |
+          rate(process_cpu_seconds_total{job="weatherinsight-api"}[5m]) * 100 > 80
+        for: 10m
+        labels:
+          severity: warning
+          service: infrastructure
+        annotations:
+          summary: "High CPU usage detected"
+          description: "CPU usage is {{ $value }}% on {{ $labels.job }} (threshold: 80%)"
+          
+      - alert: HighMemoryUsage
+        expr: |
+          process_resident_memory_bytes{job="weatherinsight-api"} / 1024 / 1024 > 1024
+        for: 10m
+        labels:
+          severity: warning
+          service: infrastructure
+        annotations:
+          summary: "High memory usage detected"
+          description: "Memory usage is {{ $value }}MB on {{ $labels.job }} (threshold: 1GB)"
+          
+      - alert: MinIODown
+        expr: up{job="minio"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: minio
+        annotations:
+          summary: "MinIO service is down"
+          description: "MinIO has been unreachable for more than 1 minute"
+          
+      - alert: MinIOHighErrorRate
+        expr: |
+          sum(rate(minio_s3_requests_errors_total[5m])) / sum(rate(minio_s3_requests_total[5m])) > 0.05
+        for: 5m
+        labels:
+          severity: warning
+          service: minio
+        annotations:
+          summary: "MinIO S3 error rate is high"
+          description: "MinIO S3 error rate is {{ $value | humanizePercentage }} (threshold: 5%)"
+          
+      - alert: DiskSpaceRunningLow
+        expr: |
+          (
+            (sum(minio_cluster_disk_total_bytes) - sum(minio_cluster_disk_free_bytes))
+            / sum(minio_cluster_disk_total_bytes)
+          ) * 100 > 85
+        for: 10m
+        labels:
+          severity: critical
+          service: minio
+        annotations:
+          summary: "Disk space running low"
+          description: "Disk usage is {{ $value }}% (threshold: 85%)"
+
+  - name: weatherinsight_pipeline
+    interval: 60s
+    rules:
+      - alert: PipelineNotRunning
+        expr: |
+          sum(increase(weatherinsight_api_requests_total{status=~"2.."}[6h])) == 0
+        for: 30m
+        labels:
+          severity: warning
+          service: pipeline
+        annotations:
+          summary: "Pipeline appears inactive"
+          description: "No successful API requests in past 6 hours - pipeline may be stalled"
+          
+      - alert: IngestionFailures
+        expr: |
+          sum(rate(weatherinsight_api_requests_total{endpoint=~".*/stations", status=~"5.."}[10m])) > 0.1
+        for: 15m
+        labels:
+          severity: warning
+          service: ingestion
+        annotations:
+          summary: "High ingestion failure rate"
+          description: "Ingestion endpoints returning errors at {{ $value }} req/s"

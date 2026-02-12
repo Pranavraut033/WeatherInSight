@@ -1,0 +1,440 @@
+{
+  "dashboard": {
+    "title": "WeatherInsight - API Performance",
+    "uid": "weatherinsight-api",
+    "version": 1,
+    "timezone": "utc",
+    "editable": true,
+    "graphTooltip": 1,
+    "time": {
+      "from": "now-1h",
+      "to": "now"
+    },
+    "refresh": "10s",
+    "tags": ["weatherinsight", "api", "performance"],
+    "panels": [
+      {
+        "id": 1,
+        "title": "API Request Rate",
+        "type": "graph",
+        "gridPos": { "x": 0, "y": 0, "w": 12, "h": 8 },
+        "targets": [
+          {
+            "expr": "sum(rate(weatherinsight_api_requests_total[5m])) by (method, endpoint)",
+            "legendFormat": "{{method}} {{endpoint}}",
+            "refId": "A"
+          }
+        ],
+        "yaxes": [
+          { "format": "reqps", "label": "Requests/sec" },
+          { "format": "short" }
+        ],
+        "lines": true,
+        "fill": 1,
+        "linewidth": 2,
+        "steppedLine": false,
+        "legend": {
+          "show": true,
+          "values": true,
+          "alignAsTable": true,
+          "current": true,
+          "max": true,
+          "avg": true,
+          "sort": "current",
+          "sortDesc": true
+        }
+      },
+      {
+        "id": 2,
+        "title": "API Latency (P50, P95, P99)",
+        "type": "graph",
+        "gridPos": { "x": 12, "y": 0, "w": 12, "h": 8 },
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.50, sum(rate(weatherinsight_api_request_duration_seconds_bucket[5m])) by (le, endpoint))",
+            "legendFormat": "P50 - {{endpoint}}",
+            "refId": "A"
+          },
+          {
+            "expr": "histogram_quantile(0.95, sum(rate(weatherinsight_api_request_duration_seconds_bucket[5m])) by (le, endpoint))",
+            "legendFormat": "P95 - {{endpoint}}",
+            "refId": "B"
+          },
+          {
+            "expr": "histogram_quantile(0.99, sum(rate(weatherinsight_api_request_duration_seconds_bucket[5m])) by (le, endpoint))",
+            "legendFormat": "P99 - {{endpoint}}",
+            "refId": "C"
+          }
+        ],
+        "yaxes": [
+          { "format": "s", "label": "Latency", "decimals": 3 },
+          { "format": "short" }
+        ],
+        "lines": true,
+        "fill": 0,
+        "linewidth": 2,
+        "legend": {
+          "show": true,
+          "values": true,
+          "alignAsTable": true,
+          "current": true,
+          "max": true,
+          "avg": true
+        },
+        "alert": {
+          "conditions": [
+            {
+              "evaluator": {
+                "params": [0.5],
+                "type": "gt"
+              },
+              "operator": {
+                "type": "and"
+              },
+              "query": {
+                "params": ["C", "5m", "now"]
+              },
+              "reducer": {
+                "params": [],
+                "type": "avg"
+              },
+              "type": "query"
+            }
+          ],
+          "executionErrorState": "alerting",
+          "frequency": "60s",
+          "handler": 1,
+          "name": "High API Latency (P99 > 500ms)",
+          "noDataState": "no_data",
+          "notifications": []
+        }
+      },
+      {
+        "id": 3,
+        "title": "Error Rate by Status Code",
+        "type": "graph",
+        "gridPos": { "x": 0, "y": 8, "w": 12, "h": 8 },
+        "targets": [
+          {
+            "expr": "sum(rate(weatherinsight_api_requests_total{status=~\"4..\"}[5m])) by (status, endpoint)",
+            "legendFormat": "{{status}} - {{endpoint}}",
+            "refId": "A"
+          },
+          {
+            "expr": "sum(rate(weatherinsight_api_requests_total{status=~\"5..\"}[5m])) by (status, endpoint)",
+            "legendFormat": "{{status}} - {{endpoint}}",
+            "refId": "B"
+          }
+        ],
+        "yaxes": [
+          { "format": "reqps", "label": "Errors/sec" },
+          { "format": "short" }
+        ],
+        "lines": true,
+        "fill": 2,
+        "linewidth": 2,
+        "legend": {
+          "show": true,
+          "values": true,
+          "alignAsTable": true,
+          "current": true,
+          "max": true,
+          "total": true
+        },
+        "seriesOverrides": [
+          {
+            "alias": "/5../",
+            "color": "red"
+          },
+          {
+            "alias": "/4../",
+            "color": "orange"
+          }
+        ]
+      },
+      {
+        "id": 4,
+        "title": "Success Rate",
+        "type": "gauge",
+        "gridPos": { "x": 12, "y": 8, "w": 6, "h": 8 },
+        "targets": [
+          {
+            "expr": "sum(rate(weatherinsight_api_requests_total{status=~\"2..\"}[5m])) / sum(rate(weatherinsight_api_requests_total[5m])) * 100",
+            "legendFormat": "Success Rate",
+            "refId": "A"
+          }
+        ],
+        "options": {
+          "showThresholdLabels": false,
+          "showThresholdMarkers": true
+        },
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percent",
+            "min": 0,
+            "max": 100,
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                { "value": 0, "color": "red" },
+                { "value": 95, "color": "orange" },
+                { "value": 99, "color": "yellow" },
+                { "value": 99.9, "color": "green" }
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 5,
+        "title": "Current Request Rate",
+        "type": "stat",
+        "gridPos": { "x": 18, "y": 8, "w": 6, "h": 4 },
+        "targets": [
+          {
+            "expr": "sum(rate(weatherinsight_api_requests_total[1m]))",
+            "legendFormat": "Total",
+            "refId": "A"
+          }
+        ],
+        "options": {
+          "colorMode": "value",
+          "graphMode": "area",
+          "orientation": "auto"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "unit": "reqps",
+            "decimals": 2,
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                { "value": 0, "color": "blue" },
+                { "value": 1, "color": "green" },
+                { "value": 10, "color": "yellow" },
+                { "value": 50, "color": "red" }
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 6,
+        "title": "Active Connections",
+        "type": "stat",
+        "gridPos": { "x": 18, "y": 12, "w": 6, "h": 4 },
+        "targets": [
+          {
+            "expr": "up{job=\"weatherinsight-api\"}",
+            "legendFormat": "API Status",
+            "refId": "A"
+          }
+        ],
+        "options": {
+          "colorMode": "background",
+          "graphMode": "none",
+          "orientation": "auto"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "mappings": [
+              { "type": "value", "value": "0", "text": "DOWN", "color": "red" },
+              {
+                "type": "value",
+                "value": "1",
+                "text": "ACTIVE",
+                "color": "green"
+              }
+            ],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                { "value": 0, "color": "red" },
+                { "value": 1, "color": "green" }
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 7,
+        "title": "Database Query Duration",
+        "type": "graph",
+        "gridPos": { "x": 0, "y": 16, "w": 12, "h": 8 },
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.50, sum(rate(weatherinsight_api_db_query_duration_seconds_bucket[5m])) by (le, operation))",
+            "legendFormat": "P50 - {{operation}}",
+            "refId": "A"
+          },
+          {
+            "expr": "histogram_quantile(0.95, sum(rate(weatherinsight_api_db_query_duration_seconds_bucket[5m])) by (le, operation))",
+            "legendFormat": "P95 - {{operation}}",
+            "refId": "B"
+          },
+          {
+            "expr": "histogram_quantile(0.99, sum(rate(weatherinsight_api_db_query_duration_seconds_bucket[5m])) by (le, operation))",
+            "legendFormat": "P99 - {{operation}}",
+            "refId": "C"
+          }
+        ],
+        "yaxes": [
+          { "format": "s", "label": "Query Duration", "decimals": 3 },
+          { "format": "short" }
+        ],
+        "lines": true,
+        "fill": 0,
+        "linewidth": 2,
+        "legend": {
+          "show": true,
+          "values": true,
+          "alignAsTable": true,
+          "current": true,
+          "max": true,
+          "avg": true
+        }
+      },
+      {
+        "id": 8,
+        "title": "Request Distribution by Endpoint",
+        "type": "piechart",
+        "gridPos": { "x": 12, "y": 16, "w": 12, "h": 8 },
+        "targets": [
+          {
+            "expr": "sum by(endpoint) (increase(weatherinsight_api_requests_total[1h]))",
+            "legendFormat": "{{endpoint}}",
+            "refId": "A"
+          }
+        ],
+        "options": {
+          "pieType": "donut",
+          "displayLabels": ["name", "percent"],
+          "legend": {
+            "show": true,
+            "placement": "right"
+          }
+        },
+        "fieldConfig": {
+          "defaults": {
+            "unit": "short"
+          }
+        }
+      },
+      {
+        "id": 9,
+        "title": "Top 10 Slowest Endpoints (P95)",
+        "type": "table",
+        "gridPos": { "x": 0, "y": 24, "w": 12, "h": 8 },
+        "targets": [
+          {
+            "expr": "topk(10, histogram_quantile(0.95, sum(rate(weatherinsight_api_request_duration_seconds_bucket[5m])) by (le, endpoint, method)))",
+            "legendFormat": "{{method}} {{endpoint}}",
+            "refId": "A",
+            "format": "table",
+            "instant": true
+          }
+        ],
+        "options": {
+          "showHeader": true,
+          "sortBy": [
+            {
+              "desc": true,
+              "displayName": "Value"
+            }
+          ]
+        },
+        "fieldConfig": {
+          "defaults": {
+            "unit": "s",
+            "decimals": 3
+          },
+          "overrides": []
+        },
+        "transformations": [
+          {
+            "id": "organize",
+            "options": {
+              "excludeByName": {},
+              "indexByName": {},
+              "renameByName": {
+                "Value": "P95 Latency (s)",
+                "endpoint": "Endpoint",
+                "method": "Method"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "id": 10,
+        "title": "Request Rate Heatmap",
+        "type": "heatmap",
+        "gridPos": { "x": 12, "y": 24, "w": 12, "h": 8 },
+        "targets": [
+          {
+            "expr": "sum(rate(weatherinsight_api_request_duration_seconds_bucket[5m])) by (le)",
+            "legendFormat": "{{le}}",
+            "format": "heatmap",
+            "refId": "A"
+          }
+        ],
+        "color": {
+          "mode": "spectrum",
+          "cardColor": "#b4ff00",
+          "colorScheme": "interpolateSpectral",
+          "exponent": 0.5,
+          "min": 0,
+          "max": null
+        },
+        "dataFormat": "tsbuckets",
+        "yAxis": {
+          "format": "s",
+          "decimals": 2,
+          "logBase": 1,
+          "label": "Request Duration"
+        }
+      }
+    ],
+    "templating": {
+      "list": [
+        {
+          "name": "datasource",
+          "type": "datasource",
+          "query": "prometheus",
+          "current": {
+            "text": "Prometheus",
+            "value": "Prometheus"
+          }
+        },
+        {
+          "name": "endpoint",
+          "type": "query",
+          "datasource": "$datasource",
+          "query": "label_values(weatherinsight_api_requests_total, endpoint)",
+          "refresh": 1,
+          "multi": true,
+          "includeAll": true,
+          "current": {
+            "text": "All",
+            "value": "$__all"
+          }
+        }
+      ]
+    },
+    "annotations": {
+      "list": [
+        {
+          "datasource": "$datasource",
+          "enable": true,
+          "expr": "ALERTS{alertstate=\"firing\", alertname=~\".*API.*\"}",
+          "iconColor": "red",
+          "name": "API Alerts",
+          "step": "60s",
+          "titleFormat": "{{alertname}}",
+          "type": "tags"
+        }
+      ]
+    }
+  },
+  "overwrite": true
+}
